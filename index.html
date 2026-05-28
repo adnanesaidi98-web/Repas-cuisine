@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chef Recomp">
+<meta name="theme-color" content="#0f1a0f">
+<title>Chef Recomp 💪</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a120a;
+    --surface: #111c11;
+    --surface2: #162016;
+    --border: #1e2e1e;
+    --green: #4cff72;
+    --green-dim: #2a8c3e;
+    --orange: #ff8c42;
+    --yellow: #ffd166;
+    --text: #e8f5e8;
+    --text-dim: #7a9c7a;
+    --red: #ff5757;
+    --radius: 16px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'DM Sans', sans-serif; }
+
+  /* SPLASH */
+  #splash {
+    position:fixed; inset:0; background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:999; transition: opacity 0.6s ease;
+  }
+  #splash h1 { font-family:'Bebas Neue'; font-size:72px; color:var(--green); letter-spacing:4px; line-height:1; }
+  #splash p { color:var(--text-dim); font-size:14px; margin-top:8px; letter-spacing:2px; text-transform:uppercase; }
+  #splash .bar { width:120px; height:3px; background:var(--border); border-radius:2px; margin-top:40px; overflow:hidden; }
+  #splash .bar-fill { height:100%; width:0; background:var(--green); border-radius:2px; animation: load 1.5s ease forwards; }
+  @keyframes load { to { width:100%; } }
+
+  /* LAYOUT */
+  #app { height:100vh; display:flex; flex-direction:column; opacity:0; transition: opacity 0.4s ease; }
+  #app.visible { opacity:1; }
+
+  /* HEADER */
+  header {
+    padding: 52px 20px 16px;
+    background: linear-gradient(to bottom, var(--surface), transparent);
+    display:flex; align-items:center; justify-content:space-between;
+    flex-shrink:0;
+  }
+  header h1 { font-family:'Bebas Neue'; font-size:32px; color:var(--green); letter-spacing:2px; }
+  .macros-badge {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:50px; padding:6px 14px;
+    font-size:12px; color:var(--text-dim);
+    display:flex; gap:10px;
+  }
+  .macros-badge span { color:var(--green); font-weight:600; }
+
+  /* NAV */
+  nav {
+    display:flex; gap:6px; padding:0 20px 12px;
+    overflow-x:auto; scrollbar-width:none; flex-shrink:0;
+  }
+  nav::-webkit-scrollbar { display:none; }
+  .nav-btn {
+    flex-shrink:0; padding:8px 18px; border-radius:50px;
+    border:1px solid var(--border); background:transparent;
+    color:var(--text-dim); font-family:'DM Sans'; font-size:13px;
+    cursor:pointer; transition:all 0.2s;
+    display:flex; align-items:center; gap:6px;
+  }
+  .nav-btn.active { background:var(--green); color:#0a120a; border-color:var(--green); font-weight:600; }
+
+  /* CONTENT */
+  #content { flex:1; overflow-y:auto; padding:0 20px 100px; scrollbar-width:none; }
+  #content::-webkit-scrollbar { display:none; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family:'Bebas Neue'; font-size:22px; letter-spacing:2px;
+    color:var(--text-dim); margin:20px 0 12px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* RECIPE CARD */
+  .recipe-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); margin-bottom:12px;
+    overflow:hidden; cursor:pointer;
+    transition: transform 0.15s, border-color 0.15s;
+    position:relative;
+  }
+  .recipe-card:active { transform:scale(0.98); }
+  .recipe-card.open { border-color:var(--green-dim); }
+  .card-header {
+    padding:16px; display:flex; align-items:center; gap:12px;
+  }
+  .card-emoji { font-size:32px; flex-shrink:0; }
+  .card-info { flex:1; }
+  .card-title { font-weight:600; font-size:15px; margin-bottom:3px; }
+  .card-meta { font-size:12px; color:var(--text-dim); display:flex; gap:10px; }
+  .card-meta .tag {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:50px; padding:2px 8px;
+  }
+  .card-meta .tag.green { border-color:var(--green-dim); color:var(--green); }
+  .card-meta .tag.orange { border-color:#8c5a2a; color:var(--orange); }
+  .card-arrow { color:var(--text-dim); font-size:18px; transition:transform 0.3s; }
+  .recipe-card.open .card-arrow { transform:rotate(90deg); }
+
+  /* RECIPE DETAIL */
+  .recipe-detail { display:none; padding:0 16px 16px; border-top:1px solid var(--border); }
+  .recipe-card.open .recipe-detail { display:block; }
+
+  /* INGREDIENTS */
+  .ingredients-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0;
+  }
+  .ingredient-item {
+    background:var(--surface2); border-radius:10px; padding:10px;
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .ingredient-name { font-size:12px; color:var(--text-dim); }
+  .ingredient-amount { font-size:15px; font-weight:600; color:var(--text); }
+
+  /* STEPS */
+  .steps-list { margin-top:16px; display:flex; flex-direction:column; gap:10px; }
+  .step-item {
+    display:flex; gap:12px; align-items:flex-start;
+    padding:12px; background:var(--surface2); border-radius:12px;
+    position:relative; overflow:hidden;
+  }
+  .step-item.done { opacity:0.5; }
+  .step-item.done::after {
+    content:'✓'; position:absolute; right:12px; top:50%;
+    transform:translateY(-50%); color:var(--green); font-size:18px; font-weight:700;
+  }
+  .step-num {
+    width:28px; height:28px; border-radius:50%; background:var(--green);
+    color:#0a120a; font-weight:700; font-size:13px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .step-item.done .step-num { background:var(--green-dim); }
+  .step-content { flex:1; }
+  .step-title { font-weight:600; font-size:13px; margin-bottom:4px; color:var(--green); }
+  .step-text { font-size:13px; color:var(--text-dim); line-height:1.5; }
+
+  /* TIMER */
+  .timer-btn {
+    margin-top:8px; padding:6px 14px; border-radius:50px;
+    background:transparent; border:1px solid var(--orange);
+    color:var(--orange); font-size:12px; font-family:'DM Sans';
+    cursor:pointer; display:flex; align-items:center; gap:6px;
+    transition: background 0.2s;
+  }
+  .timer-btn:active { background:#8c5a2a33; }
+  .timer-running { border-color:var(--green); color:var(--green); }
+
+  /* TIMER OVERLAY */
+  #timer-overlay {
+    position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+    background:var(--surface); border:1px solid var(--green);
+    border-radius:20px; padding:16px 24px;
+    display:none; flex-direction:column; align-items:center; gap:8px;
+    z-index:100; min-width:220px; box-shadow:0 8px 32px #00000080;
+  }
+  #timer-overlay.visible { display:flex; }
+  #timer-name { font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; }
+  #timer-display { font-family:'Bebas Neue'; font-size:52px; color:var(--green); letter-spacing:4px; line-height:1; }
+  #timer-bar-wrap { width:100%; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+  #timer-bar { height:100%; background:var(--green); border-radius:2px; transition:width 1s linear; }
+  #timer-close {
+    padding:6px 20px; background:var(--border); border:none; border-radius:50px;
+    color:var(--text-dim); font-family:'DM Sans'; font-size:13px; cursor:pointer;
+  }
+
+  /* MACROS PAGE */
+  .macro-day {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:16px; margin-bottom:12px;
+  }
+  .macro-day-title { font-family:'Bebas Neue'; font-size:20px; color:var(--green); letter-spacing:2px; margin-bottom:12px; }
+  .macro-row { display:flex; justify-content:space-between; margin-bottom:8px; align-items:center; }
+  .macro-label { font-size:13px; color:var(--text-dim); }
+  .macro-val { font-size:14px; font-weight:600; }
+  .macro-bar-wrap { width:100%; height:6px; background:var(--border); border-radius:3px; margin-top:4px; overflow:hidden; }
+  .macro-bar { height:100%; border-radius:3px; }
+
+  /* TIPS */
+  .tip-card {
+    background:var(--surface); border-left:3px solid var(--green);
+    border-radius:var(--radius); padding:14px 16px; margin-bottom:10px;
+  }
+  .tip-title { font-weight:600; font-size:14px; margin-bottom:4px; color:var(--green); }
+  .tip-text { font-size:13px; color:var(--text-dim); line-height:1.6; }
+
+  /* BOTTOM BAR */
+  .bottom-safe { height:env(safe-area-inset-bottom, 0px); }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <h1>CHEF<br>RECOMP</h1>
+  <p>Muscle · Énergie · Résultats</p>
+  <div class="bar"><div class="bar-fill"></div></div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>Chef Recomp 💪</h1>
+    <div class="macros-badge">~<span>185g</span> protéines/j</div>
+  </header>
+
+  <nav id="nav">
+    <button class="nav-btn active" onclick="showPage('matin')">🌅 Matin</button>
+    <button class="nav-btn" onclick="showPage('dejeuner')">☀️ Déjeuner</button>
+    <button class="nav-btn" onclick="showPage('collation')">⚡ Collation</button>
+    <button class="nav-btn" onclick="showPage('diner')">🌙 Dîner</button>
+    <button class="nav-btn" onclick="showPage('alternatives')">🔄 Alternatives</button>
+    <button class="nav-btn" onclick="showPage('conseils')">💡 Conseils</button>
+  </nav>
+
+  <div id="content"></div>
+</div>
+
+<div id="timer-overlay">
+  <div id="timer-name">Minuteur</div>
+  <div id="timer-display">00:00</div>
+  <div id="timer-bar-wrap"><div id="timer-bar" style="width:100%"></div></div>
+  <button id="timer-close" onclick="stopTimer()">✕ Arrêter</button>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const RECIPES = {
+  matin: [
+    {
+      id: 'pdj1',
+      emoji: '🍳',
+      title: 'Œufs Brouillés Muscle',
+      time: '8 min',
+      kcal: '420 kcal',
+      proteines: '38g prot',
+      tag: 'Base',
+      ingredients: [
+        { name: 'Gros œufs', amount: '3' },
+        { name: 'Pain complet', amount: '2 tranches' },
+        { name: 'Fromage râpé', amount: '20g' },
+        { name: 'Beurre', amount: '5g' },
+        { name: 'Sel & poivre', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Chauffer la poêle', text: 'Feu MOYEN — pas fort ! Ajoutez le beurre. Si ça fume c\'est trop chaud, baissez.', timer: 60 },
+        { title: 'Préparer les œufs', text: 'Cassez les œufs dans un bol. Battez à la fourchette 30 secondes. Salez, poivrez.', timer: null },
+        { title: 'Cuire en remuant', text: 'Versez dans la poêle. Remuez DOUCEMENT et EN CONTINU. Dès que ça prend, retirez du feu et continuez à remuer. Crémeux = parfait, sec = trop cuit !', timer: 120 },
+        { title: 'Toaster le pain', text: 'Faites griller le pain complet. Bien meilleur que le pain de mie — tient au ventre jusqu\'au déjeuner.', timer: null },
+        { title: 'Dresser', text: 'Posez les œufs sur le pain. Saupoudrez de fromage. Mangez avec votre café. ≈ 38g de protéines pour bien démarrer !', timer: null },
+      ]
+    },
+    {
+      id: 'pdj2',
+      emoji: '🥣',
+      title: 'Porridge Avoine Protéiné',
+      time: '5 min',
+      kcal: '380 kcal',
+      proteines: '30g prot',
+      tag: 'Variante',
+      ingredients: [
+        { name: 'Flocons d\'avoine', amount: '80g' },
+        { name: 'Lait demi-écrémé', amount: '250ml' },
+        { name: 'Œufs', amount: '2' },
+        { name: 'Banane', amount: '½' },
+        { name: 'Cannelle', amount: '1 pincée' },
+      ],
+      steps: [
+        { title: 'Cuire l\'avoine', text: 'Versez les flocons et le lait dans une casserole. Feu moyen. Remuez sans arrêt jusqu\'à épaississement.', timer: 240 },
+        { title: 'Ajouter les œufs', text: 'Hors du feu, cassez 2 œufs directement et remuez VITE pour qu\'ils cuisent dans la chaleur. Ça épaissit et booste les protéines.', timer: null },
+        { title: 'Finir et servir', text: 'Versez dans un bol. Posez la ½ banane coupée dessus. Saupoudrez de cannelle. Peut se préparer la veille au soir.', timer: null },
+      ]
+    }
+  ],
+
+  dejeuner: [
+    {
+      id: 'dej1',
+      emoji: '🍗',
+      title: 'Poulet Sauté Légumes & Patate Douce',
+      time: '25 min',
+      kcal: '580 kcal',
+      proteines: '58g prot',
+      tag: 'Principal',
+      ingredients: [
+        { name: 'Blanc/cuisse de poulet', amount: '300g' },
+        { name: 'Poivrons surgelés', amount: '150g' },
+        { name: 'Haricots verts surgelés', amount: '150g' },
+        { name: 'Patate douce', amount: '1 moyenne' },
+        { name: 'Huile d\'olive', amount: '1 c.s.' },
+        { name: 'Ail', amount: '2 gousses' },
+        { name: 'Paprika, sel, poivre', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Lancer la patate douce', text: 'Coupez en rondelles de 1cm SANS éplucher. Airfryer à 200°C. Lancez en premier — elles cuisent 20 min.', timer: 1200 },
+        { title: 'Sécher le poulet', text: 'Séchez le poulet avec du papier cuisine — IMPORTANT pour qu\'il dore bien. Coupez en morceaux. Salez, poivrez, paprika des deux côtés.', timer: null },
+        { title: 'Saisir le poulet', text: 'Feu VIF avec l\'huile. Quand c\'est chaud, posez le poulet. NE TOUCHEZ PAS 3-4 min. Retournez. Encore 3-4 min. Doré dehors, plus rose dedans.', timer: 480 },
+        { title: 'Légumes dans la poêle', text: 'Baissez feu MOYEN. Ajoutez l\'ail haché ou écrasé. Puis poivrons et haricots SURGELÉS directement. Mélangez. Couvrez 5 min.', timer: 300 },
+        { title: 'Finir et dresser', text: 'Retirez le couvercle 2 min pour faire dorer. Sortez la patate douce. Dressez dans l\'assiette. ≈ 58g de protéines !', timer: 120 },
+      ]
+    },
+    {
+      id: 'dej2',
+      emoji: '🐟',
+      title: 'Bol Sardines Riz & Poivrons',
+      time: '15 min',
+      kcal: '520 kcal',
+      proteines: '45g prot',
+      tag: 'Budget',
+      ingredients: [
+        { name: 'Sardines en boîte', amount: '2 boîtes' },
+        { name: 'Riz', amount: '80g sec' },
+        { name: 'Poivrons surgelés', amount: '150g' },
+        { name: 'Huile d\'olive', amount: '1 c.s.' },
+        { name: 'Citron', amount: '½' },
+        { name: 'Sel, poivre, cumin', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Cuire le riz', text: 'Rincez le riz à l\'eau froide. Mettez dans une casserole avec 2x le volume d\'eau. Feu fort jusqu\'à ébullition, puis feu doux 12 min couvercle fermé.', timer: 720 },
+        { title: 'Sauter les poivrons', text: 'Poêle feu vif avec huile. Poivrons surgelés directement. 5-6 min jusqu\'à ce que l\'eau s\'évapore et qu\'ils colorent. Cumin, sel, poivre.', timer: 360 },
+        { title: 'Préparer les sardines', text: 'Égouttez les sardines. Retirez l\'arête centrale si elle vous dérange. Arrosez de jus de citron. Poivrez.', timer: null },
+        { title: 'Assembler le bol', text: 'Riz au fond, poivrons dessus, sardines par-dessus. Un filet d\'huile d\'olive. Les sardines sont riches en oméga-3 — parfaites pour la recomposition !', timer: null },
+      ]
+    }
+  ],
+
+  collation: [
+    {
+      id: 'col1',
+      emoji: '🥫',
+      title: 'Thon Crackers & Vache qui Rit',
+      time: '3 min',
+      kcal: '280 kcal',
+      proteines: '32g prot',
+      tag: 'Rapide',
+      ingredients: [
+        { name: 'Thon en boîte égoutté', amount: '1 boîte (140g)' },
+        { name: 'Pain complet ou crackers', amount: '2 tranches' },
+        { name: 'Vache qui rit', amount: '2 portions' },
+        { name: 'Poivre', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Préparer', text: 'Égouttez bien le thon. Écrasez légèrement à la fourchette.', timer: null },
+        { title: 'Tartiner', text: 'Étalez la Vache qui rit sur le pain. Posez le thon par-dessus. Poivrez.', timer: null },
+        { title: 'Manger', text: 'À consommer 1h avant l\'entraînement ou comme collation de l\'après-midi. Simple, efficace, ≈ 32g de protéines.', timer: null },
+      ]
+    },
+    {
+      id: 'col2',
+      emoji: '🥚',
+      title: 'Œufs Durs & Fromage',
+      time: '12 min',
+      kcal: '240 kcal',
+      proteines: '28g prot',
+      tag: 'Préparer à l\'avance',
+      ingredients: [
+        { name: 'Œufs', amount: '3' },
+        { name: 'Fromage râpé ou carré', amount: '30g' },
+        { name: 'Sel', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Cuire les œufs', text: 'Mettez les œufs dans une casserole d\'eau FROIDE. Feu fort. Dès ébullition, comptez exactement 10 min.', timer: 600 },
+        { title: 'Refroidir', text: 'Passez sous l\'eau froide 2 min. Épluchez. Se conserve 3 jours au frigo — préparez-en plusieurs d\'un coup !', timer: 120 },
+        { title: 'Manger', text: 'Coupez en deux. Salez légèrement. Accompagnez du fromage. Parfait à préparer le soir pour le lendemain.', timer: null },
+      ]
+    }
+  ],
+
+  diner: [
+    {
+      id: 'din1',
+      emoji: '🐟',
+      title: 'Lieu Noir / Merlan Poêlé & Légumes',
+      time: '20 min',
+      kcal: '420 kcal',
+      proteines: '52g prot',
+      tag: 'Léger & Musclé',
+      ingredients: [
+        { name: 'Filet de lieu noir ou merlan', amount: '300g' },
+        { name: 'Haricots verts ou brocolis', amount: '200g' },
+        { name: 'Ail', amount: '2 gousses' },
+        { name: 'Huile d\'olive', amount: '1 c.s.' },
+        { name: 'Citron', amount: '½' },
+        { name: 'Thym ou herbes', amount: 'à goût' },
+        { name: 'Sel, poivre', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Préparer le poisson', text: 'Séchez le filet avec du papier cuisine. Salez et poivrez les deux côtés. Le lieu noir et le merlan sont peu chers chez le poissonnier — demandez-les directement !', timer: null },
+        { title: 'Cuire les légumes', text: 'Poêle feu moyen avec huile. Ajoutez les légumes et l\'ail haché. 6-8 min en remuant. Salez, poivrez. Réservez.', timer: 480 },
+        { title: 'Cuire le poisson', text: 'Dans la même poêle feu VIF. Posez le filet côté présentation en bas. 3-4 min SANS TOUCHER. Retournez délicatement. 2-3 min de l\'autre côté.', timer: 360 },
+        { title: 'Finir', text: 'Pressez le citron par-dessus. Le dîner doit être léger en glucides — pas de riz ce soir. Le poisson le soir = récupération musculaire optimale.', timer: null },
+      ]
+    },
+    {
+      id: 'din2',
+      emoji: '🥩',
+      title: 'Œufs Cocotte Champignons & Fromage',
+      time: '18 min',
+      kcal: '380 kcal',
+      proteines: '35g prot',
+      tag: 'Sans glucides',
+      ingredients: [
+        { name: 'Œufs', amount: '4' },
+        { name: 'Champignons surgelés', amount: '200g' },
+        { name: 'Fromage râpé', amount: '40g' },
+        { name: 'Vache qui rit', amount: '2 portions' },
+        { name: 'Beurre', amount: '10g' },
+        { name: 'Sel, poivre, persil', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Cuire les champignons', text: 'Poêle feu VIF avec beurre. Champignons surgelés directement. Laissez l\'eau s\'évaporer complètement — 6-7 min. Salez, poivrez. Ils doivent être dorés.', timer: 420 },
+        { title: 'Préparer', text: 'Baissez à feu DOUX. Répartissez la Vache qui rit en petits morceaux sur les champignons. Faites des petits creux avec une cuillère.', timer: null },
+        { title: 'Casser les œufs', text: 'Cassez un œuf dans chaque creux. Saupoudrez de fromage râpé. Couvrez avec un couvercle ou une assiette.', timer: null },
+        { title: 'Cuire les œufs', text: 'Attendez 4-5 min à feu TRÈS DOUX. Les blancs doivent être pris, les jaunes encore coulants. Servez directement dans la poêle.', timer: 300 },
+      ]
+    },
+    {
+      id: 'din3',
+      emoji: '🫙',
+      title: 'Maquereau Ebly & Poivrons Rôtis',
+      time: '20 min',
+      kcal: '490 kcal',
+      proteines: '40g prot',
+      tag: 'Oméga-3',
+      ingredients: [
+        { name: 'Maquereau en boîte', amount: '1 grande boîte' },
+        { name: 'Ebly (blé précuit)', amount: '80g sec' },
+        { name: 'Poivrons surgelés', amount: '200g' },
+        { name: 'Huile d\'olive', amount: '1 c.s.' },
+        { name: 'Ail', amount: '2 gousses' },
+        { name: 'Sel, poivre, cumin', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Cuire l\'Ebly', text: 'L\'Ebly c\'est rapide — 10 min dans de l\'eau bouillante salée. C\'est meilleur que le riz pour la recomposition car plus de fibres.', timer: 600 },
+        { title: 'Rôtir les poivrons', text: 'Poêle feu VIF. Poivrons surgelés + ail haché. Cumin, sel, poivre. 6-8 min jusqu\'à légère coloration.', timer: 480 },
+        { title: 'Préparer le maquereau', text: 'Égouttez. Le maquereau en boîte est plein d\'oméga-3 et moins cher que le saumon. Parfait pour brûler la graisse et récupérer.', timer: null },
+        { title: 'Assembler', text: 'Ebly dans l\'assiette, poivrons dessus, maquereau par-dessus. Un filet d\'huile d\'olive. Simple et ultra-efficace pour la recomp !', timer: null },
+      ]
+    }
+  ],
+
+  alternatives: [
+    {
+      id: 'alt1',
+      emoji: '🥗',
+      title: 'Bol Thon Riz & Poivrons',
+      time: '15 min',
+      kcal: '480 kcal',
+      proteines: '42g prot',
+      tag: 'Variante déjeuner',
+      ingredients: [
+        { name: 'Thon en boîte', amount: '2 boîtes' },
+        { name: 'Riz', amount: '80g sec' },
+        { name: 'Poivrons surgelés', amount: '150g' },
+        { name: 'Vache qui rit', amount: '2 portions' },
+        { name: 'Huile d\'olive', amount: '1 c.s.' },
+        { name: 'Sel, poivre, paprika', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Cuire le riz', text: 'Rincez. 2x volume d\'eau. Ébullition puis feu doux 12 min couvercle fermé. Ne jamais soulever le couvercle pendant la cuisson !', timer: 720 },
+        { title: 'Poêler les poivrons', text: 'Feu vif avec huile. Poivrons surgelés. 5-6 min. Paprika, sel, poivre.', timer: 360 },
+        { title: 'Assembler', text: 'Riz + poivrons + thon égoutté. Vache qui rit fondue dessus. Mélangez légèrement. Riche en protéines, peu cher, efficace.', timer: null },
+      ]
+    },
+    {
+      id: 'alt2',
+      emoji: '🍳',
+      title: 'Omelette Champignons & Fromage',
+      time: '10 min',
+      kcal: '390 kcal',
+      proteines: '36g prot',
+      tag: 'Dîner express',
+      ingredients: [
+        { name: 'Œufs', amount: '4' },
+        { name: 'Champignons surgelés', amount: '150g' },
+        { name: 'Fromage râpé', amount: '40g' },
+        { name: 'Beurre', amount: '10g' },
+        { name: 'Sel, poivre, herbes', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Cuire les champignons', text: 'Feu vif avec beurre. Champignons jusqu\'à ce qu\'ils soient dorés. 5 min. Réservez dans l\'assiette.', timer: 300 },
+        { title: 'Faire l\'omelette', text: 'Battez 4 œufs avec sel et poivre. Dans la même poêle feu MOYEN. Versez les œufs. Secouez la poêle. Quand les bords prennent, rabattez les côtés vers le centre.', timer: 180 },
+        { title: 'Garnir et plier', text: 'Posez les champignons et le fromage sur la moitié. Pliez l\'omelette en deux. 30 sec encore. Glissez dans l\'assiette.', timer: 30 },
+      ]
+    },
+    {
+      id: 'alt3',
+      emoji: '🌮',
+      title: 'Wrap Poulet Froid & Légumes',
+      time: '5 min',
+      kcal: '430 kcal',
+      proteines: '44g prot',
+      tag: 'Préparé à l\'avance',
+      ingredients: [
+        { name: 'Tortillas tacos', amount: '2' },
+        { name: 'Poulet cuit (restes)', amount: '200g' },
+        { name: 'Vache qui rit', amount: '3 portions' },
+        { name: 'Fromage râpé', amount: '30g' },
+        { name: 'Poivrons cuits (restes)', amount: '100g' },
+        { name: 'Sel, poivre', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Préparer', text: 'Idéal avec les restes du déjeuner. Récupérez le poulet et les poivrons du repas précédent. Effilochez le poulet à la fourchette.', timer: null },
+        { title: 'Tartiner', text: 'Étalez la Vache qui rit sur la tortilla. Posez le poulet, les poivrons, le fromage râpé.', timer: null },
+        { title: 'Rouler', text: 'Repliez les côtés puis roulez serré. Coupez en deux en diagonal. Parfait pour emporter à la salle de sport !', timer: null },
+      ]
+    },
+    {
+      id: 'alt4',
+      emoji: '🫙',
+      title: 'Sardines Ebly & Légumes',
+      time: '15 min',
+      kcal: '460 kcal',
+      proteines: '38g prot',
+      tag: 'Oméga-3 & Budget',
+      ingredients: [
+        { name: 'Sardines en boîte', amount: '2 boîtes' },
+        { name: 'Ebly', amount: '80g sec' },
+        { name: 'Haricots verts surgelés', amount: '150g' },
+        { name: 'Huile d\'olive', amount: '1 c.s.' },
+        { name: 'Ail', amount: '1 gousse' },
+        { name: 'Sel, poivre, citron', amount: 'à goût' },
+      ],
+      steps: [
+        { title: 'Cuire l\'Ebly', text: 'Eau bouillante salée. 10 min. Égouttez.', timer: 600 },
+        { title: 'Poêler les haricots', text: 'Feu moyen avec huile et ail. Haricots surgelés. 7-8 min. Salez, poivrez.', timer: 480 },
+        { title: 'Assembler', text: 'Ebly + haricots + sardines égouttées. Jus de citron. Les sardines sont parmi les meilleures sources de protéines et d\'oméga-3 pour le budget !', timer: null },
+      ]
+    }
+  ],
+
+  conseils: []
+};
+
+const CONSEILS = [
+  { title: '💧 Hydratation', text: 'Buvez 3L d\'eau par jour minimum. La déshydratation freine la perte de graisse et la récupération musculaire. Un verre d\'eau avant chaque repas.' },
+  { title: '⏱️ Timing des repas', text: 'Mangez votre déjeuner 1h avant ou juste après l\'entraînement. Les glucides (patate douce, riz) sont utilisés pour le muscle à ce moment-là, pas stockés en graisse.' },
+  { title: '🛒 Poissonnier — que demander ?', text: 'Demandez du lieu noir, du merlan, ou du maquereau frais. Ce sont les moins chers et les meilleurs pour la recomposition. Évitez le poisson pané.' },
+  { title: '🍗 Cuire le poulet en batch', text: 'Cuisinez 500-600g de poulet le dimanche soir. Conservez 3-4 jours au frigo. Utilisez dans vos wraps, bols et déjeuners toute la semaine.' },
+  { title: '🥚 Préparez les œufs durs à l\'avance', text: 'Faites cuire 6 œufs durs le dimanche. Se conservent 3 jours au frigo. Collation prête en 0 minute.' },
+  { title: '🔥 Airfryer = allié numéro 1', text: 'Patate douce, poulet, légumes — tout passe à l\'airfryer à 200°C. Moins d\'huile, plus croustillant, moins de vaisselle.' },
+  { title: '📊 Vos objectifs caloriques', text: 'Cible : 2400-2500 kcal/jour. Protéines : 180-200g minimum. Avec ce plan vous êtes à ≈ 1800-1900 kcal, ajoutez une seconde collation si vous avez faim.' },
+  { title: '🐟 Sardines & Maquereau = bombes', text: 'Boîte à 1€, 25-30g de protéines, plein d\'oméga-3 qui brûlent la graisse viscérale. Mangez-en 3-4 fois par semaine.' },
+];
+
+// ─── TIMER ──────────────────────────────────────────────────────────────────
+let timerInterval = null;
+let timerRemaining = 0;
+let timerTotal = 0;
+
+function startTimer(seconds, name) {
+  if (timerInterval) clearInterval(timerInterval);
+  timerRemaining = seconds;
+  timerTotal = seconds;
+  document.getElementById('timer-name').textContent = name;
+  document.getElementById('timer-overlay').classList.add('visible');
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timerRemaining--;
+    updateTimerDisplay();
+    if (timerRemaining <= 0) {
+      clearInterval(timerInterval);
+      document.getElementById('timer-display').textContent = '✓ FINI !';
+      document.getElementById('timer-display').style.color = 'var(--green)';
+      if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timerRemaining / 60);
+  const s = timerRemaining % 60;
+  document.getElementById('timer-display').textContent =
+    String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  document.getElementById('timer-display').style.color = timerRemaining <= 10 ? 'var(--orange)' : 'var(--green)';
+  document.getElementById('timer-bar').style.width = (timerRemaining / timerTotal * 100) + '%';
+}
+
+function stopTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  document.getElementById('timer-overlay').classList.remove('visible');
+}
+
+// ─── RENDER ─────────────────────────────────────────────────────────────────
+function renderRecipeCard(recipe) {
+  const stepsHtml = recipe.steps.map((step, i) => `
+    <div class="step-item" id="step-${recipe.id}-${i}" onclick="toggleStep('${recipe.id}', ${i})">
+      <div class="step-num">${i + 1}</div>
+      <div class="step-content">
+        <div class="step-title">${step.title}</div>
+        <div class="step-text">${step.text}</div>
+        ${step.timer ? `
+          <button class="timer-btn" id="tbtn-${recipe.id}-${i}"
+            onclick="event.stopPropagation(); launchTimer(${step.timer}, '${recipe.id}', ${i}, '${step.title}')">
+            ⏱ ${Math.floor(step.timer/60) > 0 ? Math.floor(step.timer/60)+'min ' : ''}${step.timer%60 > 0 ? step.timer%60+'sec' : ''}
+          </button>` : ''}
+      </div>
+    </div>`).join('');
+
+  const ingredientsHtml = recipe.ingredients.map(ing => `
+    <div class="ingredient-item">
+      <div class="ingredient-name">${ing.name}</div>
+      <div class="ingredient-amount">${ing.amount}</div>
+    </div>`).join('');
+
+  return `
+    <div class="recipe-card" id="card-${recipe.id}" onclick="toggleCard('${recipe.id}')">
+      <div class="card-header">
+        <div class="card-emoji">${recipe.emoji}</div>
+        <div class="card-info">
+          <div class="card-title">${recipe.title}</div>
+          <div class="card-meta">
+            <span class="tag">⏱ ${recipe.time}</span>
+            <span class="tag orange">🔥 ${recipe.kcal}</span>
+            <span class="tag green">💪 ${recipe.proteines}</span>
+          </div>
+        </div>
+        <div class="card-arrow">›</div>
+      </div>
+      <div class="recipe-detail">
+        <div class="section-title" style="font-size:14px; margin:8px 0;">Ingrédients</div>
+        <div class="ingredients-grid">${ingredientsHtml}</div>
+        <div class="section-title" style="font-size:14px; margin:12px 0 8px;">Étapes</div>
+        <div class="steps-list">${stepsHtml}</div>
+      </div>
+    </div>`;
+}
+
+function toggleCard(id) {
+  const card = document.getElementById('card-' + id);
+  card.classList.toggle('open');
+}
+
+function toggleStep(recipeId, stepIndex) {
+  const step = document.getElementById(`step-${recipeId}-${stepIndex}`);
+  step.classList.toggle('done');
+}
+
+function launchTimer(seconds, recipeId, stepIndex, title) {
+  startTimer(seconds, title);
+  const btn = document.getElementById(`tbtn-${recipeId}-${stepIndex}`);
+  if (btn) btn.classList.add('timer-running');
+}
+
+function showPage(page) {
+  // Update nav
+  document.querySelectorAll('.nav-btn').forEach((btn, i) => btn.classList.remove('active'));
+  const pages = ['matin','dejeuner','collation','diner','alternatives','conseils'];
+  const idx = pages.indexOf(page);
+  document.querySelectorAll('.nav-btn')[idx]?.classList.add('active');
+
+  const content = document.getElementById('content');
+
+  if (page === 'conseils') {
+    content.innerHTML = `
+      <div class="section-title">💡 Conseils Recomp</div>
+      ${CONSEILS.map(c => `
+        <div class="tip-card">
+          <div class="tip-title">${c.title}</div>
+          <div class="tip-text">${c.text}</div>
+        </div>`).join('')}
+      <div class="bottom-safe"></div>`;
+    return;
+  }
+
+  const titles = {
+    matin: '🌅 Petit Déjeuner',
+    dejeuner: '☀️ Déjeuner',
+    collation: '⚡ Collation',
+    diner: '🌙 Dîner',
+    alternatives: '🔄 Recettes Alternatives',
+  };
+
+  const recipes = RECIPES[page] || [];
+  content.innerHTML = `
+    <div class="section-title">${titles[page]}</div>
+    ${recipes.map(renderRecipeCard).join('')}
+    <div class="bottom-safe"></div>`;
+
+  content.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    document.getElementById('splash').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('app').classList.add('visible');
+      showPage('matin');
+    }, 600);
+  }, 1800);
+});
+</script>
+</body>
+</html>
